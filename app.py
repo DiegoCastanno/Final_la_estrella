@@ -30,11 +30,11 @@ import plotly.graph_objects
 
 
 # definir rutas bases de datos
-coord_url= 'BD/coordenadas.csv'
-vic_url = 'DATA/VICTIMAS_ABR_2021.xlsx'
-com_url = 'DATA/COMPARENDOS_ABR_2021.xlsx'
-acc_url = 'DATA/ACCIDENTALIDAD_ABR_2021.xls'
-barrio_url = 'BD/barrios.json'
+coord_url= 'coordenadas.csv'
+vic_url = 'VICTIMAS_ABR_2021.xlsx'
+com_url = 'COMPARENDOS_ABR_2021.xlsx'
+acc_url = 'ACCIDENTALIDAD_ABR_2021.xls'
+barrio_url = 'barrios.json'
 
 # importar bases
 @st.cache(persist=True)
