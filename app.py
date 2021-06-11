@@ -5,9 +5,9 @@ import pandas as pd
 import numpy as np
 #! pip install plotly
 import plotly.express as px
-import matplotlib.pyplot as plt
-from pylab import rcParams
-import json
+#import matplotlib.pyplot as plt
+#from pylab import rcParams
+#import json
 #! pip install geopandas
 import geopandas as gpd
 #import base64
@@ -20,10 +20,10 @@ from folium.plugins import MeasureControl
 from folium.plugins import FloatImage
 from folium.plugins import MarkerCluster
 from folium.plugins import HeatMap
-from folium.features import DivIcon
-from collections import defaultdict
+#from folium.features import DivIcon
+#from collections import defaultdict
 from streamlit_folium import folium_static
-from dateutil.relativedelta import relativedelta # to add days or years
+#from dateutil.relativedelta import relativedelta # to add days or years
 from statsmodels.tsa.seasonal import seasonal_decompose
 from statsmodels.tsa.arima.model import ARIMA
 import plotly.graph_objects
