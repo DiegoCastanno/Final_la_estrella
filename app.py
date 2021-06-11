@@ -781,7 +781,7 @@ if tema == 'Accidentes' and periodo == 'Día' and datos == True :
     st.plotly_chart(c)
     
     
-    fig = go.Figure(data=[go.Table(
+    fig = plotly.graph_objects.go.Figure(data=[plotly.graph_objects.go.Table(
     header=dict(values=list(d.columns),
                 fill_color='lightgrey',
                 align='center',
@@ -904,7 +904,7 @@ if tema == 'Accidentes' and periodo == 'Semana' and datos == True :
     st.plotly_chart(g)
     
     
-    fig = go.Figure(data=[go.Table(
+    fig = plotly.graph_objects.go.Figure(data=[plotly.graph_objects.go.Table(
     header=dict(values=list(h.columns),
                 fill_color='lightgrey',
                 align='center',
@@ -1025,7 +1025,7 @@ if tema == 'Accidentes' and periodo == 'Mes' and datos == True :
     st.plotly_chart(k)
     
     
-    fig = go.Figure(data=[go.Table(
+    fig = plotly.graph_objects.go.Figure(data=[plotly.graph_objects.go.Table(
     header=dict(values=list(l.columns),
                 fill_color='lightgrey',
                 align='center',
@@ -1173,7 +1173,7 @@ if tema == 'Comparendos' and periodo == 'Día' and datos == True :
     st.plotly_chart(n)
     st.plotly_chart(o)
     
-    fig = go.Figure(data=[go.Table(
+    fig = plotly.graph_objects.go.Figure(data=[plotly.graph_objects.go.Table(
     header=dict(values=list(p.columns),
                 fill_color='lightgrey',
                 align='center',
@@ -1296,7 +1296,7 @@ if tema == 'Comparendos' and periodo == 'Semana' and datos == True :
     st.plotly_chart(r)
     st.plotly_chart(s)
     
-    fig = go.Figure(data=[go.Table(
+    fig = plotly.graph_objects.go.Figure(data=[plotly.graph_objects.go.Table(
     header=dict(values=list(t.columns),
                 fill_color='lightgrey',
                 align='center',
@@ -1420,7 +1420,7 @@ if tema == 'Comparendos' and periodo == 'Mes' and datos == True :
     st.plotly_chart(w)
     st.plotly_chart(y)
 
-    fig = go.Figure(data=[go.Table(
+    fig = plotly.graph_objects.go.Figure(data=[plotly.graph_objects.go.Table(
     header=dict(values=list(z.columns),
                 fill_color='lightgrey',
                 align='center',

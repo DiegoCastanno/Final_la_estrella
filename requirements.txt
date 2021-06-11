@@ -1,12 +1,11 @@
-streamlit
-pandas
-numpy
-plotly.express
-geopandas
-datetime
-shapely
+streamlit as st
+pandas as pd
+numpy as np
+plotly.express as px
+geopandas as gps
+datetime as dt
+shapely 
 folium
 streamlit_folium
-statsmodels
 statsmodels
 plotly
