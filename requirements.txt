@@ -2,7 +2,7 @@ streamlit
 pandas
 numpy
 plotly.express
-matplotlib.pyplot
+matplotlib
 pylab
 json
 geopandas
