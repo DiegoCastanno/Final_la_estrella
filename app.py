@@ -1,4 +1,5 @@
 # importa paquetes
+'''
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -26,7 +27,7 @@ from dateutil.relativedelta import relativedelta # to add days or years
 from statsmodels.tsa.seasonal import seasonal_decompose
 from statsmodels.tsa.arima.model import ARIMA
 import plotly.graph_objects as go
-
+'''
 
 # definir rutas bases de datos
 coord_url= 'BD/coordenadas.csv'
@@ -79,11 +80,13 @@ def aplicar_barrio(x):
     
     return coord
 
+'''
 def get_table_download_link(df):
     csv = df.to_csv(index=False)
     b64 = base64.b64encode(csv.encode()).decode()  # some strings <-> bytes conversions necessary here
     href = f'<a href="data:file/csv;base64,{b64}" download="datos.csv">Descargar archivo csv</a>'
     return href
+'''
 
 # cargar datos 
 vic = load_data(vic_url) # victimas
@@ -794,7 +797,7 @@ if tema == 'Accidentes' and periodo == 'Día' and datos == True :
     title_text="<b>Tabla con Predicciones <b>")
     st.write(fig)
     
-    st.markdown(get_table_download_link(d), unsafe_allow_html=True)
+    #st.markdown(get_table_download_link(d), unsafe_allow_html=True)
 if tema == 'Accidentes' and periodo == 'Día' and datos == False :
     st.plotly_chart(a)
     st.plotly_chart(b)
@@ -917,7 +920,7 @@ if tema == 'Accidentes' and periodo == 'Semana' and datos == True :
     title_text="<b>Tabla con Predicciones <b>")
     st.write(fig)
     
-    st.markdown(get_table_download_link(h), unsafe_allow_html=True)
+    #st.markdown(get_table_download_link(h), unsafe_allow_html=True)
 if tema == 'Accidentes' and periodo == 'Semana' and datos == False :   
     st.plotly_chart(e)
     st.plotly_chart(f)
@@ -1038,7 +1041,7 @@ if tema == 'Accidentes' and periodo == 'Mes' and datos == True :
     title_text="<b>Tabla con Predicciones <b>")
     st.write(fig)
     
-    st.markdown(get_table_download_link(l), unsafe_allow_html=True)
+    #st.markdown(get_table_download_link(l), unsafe_allow_html=True)
 if tema == 'Accidentes' and periodo == 'Mes' and datos == False :   
     st.plotly_chart(i)
     st.plotly_chart(j)
@@ -1186,7 +1189,7 @@ if tema == 'Comparendos' and periodo == 'Día' and datos == True :
     title_text="<b>Tabla con Predicciones <b>")
     st.write(fig)
     
-    st.markdown(get_table_download_link(p), unsafe_allow_html=True)
+    #st.markdown(get_table_download_link(p), unsafe_allow_html=True)
 if tema == 'Comparendos' and periodo == 'Día' and datos == False :   
     st.plotly_chart(m)
     st.plotly_chart(n)
@@ -1309,7 +1312,7 @@ if tema == 'Comparendos' and periodo == 'Semana' and datos == True :
     title_text="<b>Tabla con Predicciones <b>")
     st.write(fig)
     
-    st.markdown(get_table_download_link(t), unsafe_allow_html=True)
+    #st.markdown(get_table_download_link(t), unsafe_allow_html=True)
 if tema == 'Comparendos' and periodo == 'Semana' and datos == False :   
     st.plotly_chart(u)
     st.plotly_chart(r)
@@ -1433,7 +1436,7 @@ if tema == 'Comparendos' and periodo == 'Mes' and datos == True :
     title_text="<b>Tabla con Predicciones <b>")
     st.write(fig)
     
-    st.markdown(get_table_download_link(z), unsafe_allow_html=True)
+    #st.markdown(get_table_download_link(z), unsafe_allow_html=True)
 if tema == 'Comparendos' and periodo == 'Mes' and datos == False :   
     st.plotly_chart(v)
     st.plotly_chart(w)
