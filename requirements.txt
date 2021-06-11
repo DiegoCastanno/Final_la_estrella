@@ -7,7 +7,6 @@ datetime
 shapely
 folium
 streamlit_folium
-dateutil
 statsmodels
 statsmodels
 plotly.graph_objects
