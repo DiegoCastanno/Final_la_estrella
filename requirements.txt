@@ -9,4 +9,4 @@ folium
 streamlit_folium
 statsmodels
 statsmodels
-plotly.graph_objects
+plotly
