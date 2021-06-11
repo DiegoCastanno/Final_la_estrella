@@ -1,6 +1,5 @@
 streamlit==0.82.0
 xlrd<2.0
-openpyxl
 pandas
 numpy
 plotly.express
