@@ -1,0 +1,171 @@
+body {
+    background-color: #eee;
+    text-align: center;
+    font-family: Open Sans
+}
+
+.fullScreenFrame > div {
+    display: flex;
+    justify-content: center;
+
+}
+
+
+.css-kywgdc {
+    position: relative;
+    top: 10px;
+    right: 10px;
+    left: 10px;
+    height: 0.5rem;
+    background: rgb(255, 253, 128);
+    z-index: 1000020;
+}
+
+.reportview-container .markdown-text-container {
+    font-family: Open Sans;
+}
+.sidebar .sidebar-content {
+    background-image: linear-gradient(#8E91A0,#3F4046);
+    color: white;
+    font-family: Open Sans;
+    
+}
+.Widget>label {
+    color: white;
+    font-family: Open Sans;
+}
+[class^="st-b"]  {
+    color: white;
+    font-family: Open Sans
+}
+.st-bb {
+    background-color: 607AF1;
+    font-family: Open Sans;
+}
+.st-at {
+    background-color: transparent;
+    font-family: Open Sans;
+}
+footer {
+    font-family: Open Sans;
+    background-color: 607AF1;
+}
+.reportview-container .main footer, .reportview-container .main footer a {
+    color: #6060F1;
+    font-family: Open Sans;
+    
+}
+header .decoration {
+    background-image: none;
+    background-color: 607AF1; 
+    font-family: Open Sans;
+}
+
+input[type='radio']:checked:after {background-color: #ffa500 !important;}
+    
+.st-em {
+    border-bottom-color: rgb(118 121 133);
+}
+
+<style>
+.st-el {
+    border-top-color: rgb(36 58 24);
+}
+<style>
+.st-ek {
+    border-right-color: rgb(74 246 51);
+}
+<style>
+.st-ej {
+    border-left-color: rgb(160 246 51);
+    
+}
+
+.st-cc {
+    color: rgb(255 255 255);
+}
+
+.item{
+     color: #424949;
+     font-family: Open Sans;
+     text-align: left;
+     font-size: 13px
+}
+.numeros{
+     color: #3498DB;
+     font-family: Open Sans;
+     text-align: left;
+     font-size: 12px
+}
+.letras{  
+     color: #424949;
+     font-family: Open Sans;
+     text-align: left;
+     font-size: 12px
+}   
+.titulo{  
+     color: black;
+     font-family: Open Sans;
+     text-align: right;
+     font-size: 35px
+}  
+.image{  
+
+     text-align: left
+}  
+
+.st-cf {
+    color: rgb(20 20 21);
+}
+
+.st-ce {
+    color: rgb(255 255 255);
+}
+
+.st-bp {
+    color: rgb(234 236 253);
+}
+    
+p{
+color: red
+}
+
+
+
+.streamlit-button.primary-button:active {
+    color: black;
+    border-color: black;
+    background-color: transparent;
+}
+    
+.streamlit-button.icon-button:active {
+    color:black;
+    border-color: transparent;
+    background-color: transparent;
+}
+
+.streamlit-button.icon-button:hover {
+    border-color: black;
+    color: black;
+}
+
+.Widget row-widget stButton{
+    border-color: white;
+    color: black;
+}
+
+.menu-item:active:not(.menu-item-disabled) {
+    background-color: transparent;
+    color: transparent;
+    outline: none;
+}
+
+.reportview-container .main .block-container {
+    flex: 1 1;
+    max-width: 730px;
+    width: 100%;
+    padding: 5rem 5rem 10rem;
+    box-sizing: border-box;
+}
+
+
