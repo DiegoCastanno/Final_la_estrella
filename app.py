@@ -1,5 +1,5 @@
 # importa paquetes
-'''
+
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -10,7 +10,7 @@ from pylab import rcParams
 import json
 #! pip install geopandas
 import geopandas as gpd
-import base64
+#import base64
 import datetime as dt
 from shapely.geometry import shape, GeometryCollection, Point
 import folium
@@ -26,8 +26,8 @@ from streamlit_folium import folium_static
 from dateutil.relativedelta import relativedelta # to add days or years
 from statsmodels.tsa.seasonal import seasonal_decompose
 from statsmodels.tsa.arima.model import ARIMA
-import plotly.graph_objects as go
-'''
+import plotly.graph_objects
+
 
 # definir rutas bases de datos
 coord_url= 'BD/coordenadas.csv'

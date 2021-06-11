@@ -1,9 +1,9 @@
-streamlit as st
-pandas as pd
-numpy as np
-plotly.express as px
-geopandas as gps
-datetime as dt
+streamlit==0.82.0
+pandas
+numpy
+plotly.express
+geopandas
+datetime
 shapely 
 folium
 streamlit_folium
