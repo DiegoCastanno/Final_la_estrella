@@ -3,7 +3,6 @@ pandas
 numpy
 plotly.express
 geopandas
-base64
 datetime
 shapely.geometry
 folium
