@@ -4,10 +4,10 @@ numpy
 plotly.express
 geopandas
 datetime
-shapely.geometry
+shapely
 folium
 streamlit_folium
-dateutil.relativedelta
-statsmodels.tsa.seasonal
-statsmodels.tsa.arima.model
+dateutil
+statsmodels
+statsmodels
 plotly.graph_objects
