@@ -2,14 +2,11 @@ streamlit
 pandas
 numpy
 plotly.express
-matplotlib
-json
 geopandas
 base64
 datetime
 shapely.geometry
 folium
-collections
 streamlit_folium
 dateutil.relativedelta
 statsmodels.tsa.seasonal
