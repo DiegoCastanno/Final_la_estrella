@@ -89,11 +89,11 @@ def get_table_download_link(df):
 '''
 
 # cargar datos 
-vic = load_data(vic_url, engine='openpyxl') # victimas
-com = load_data(com_url, engine='openpyxl') # comparendos
-acc = load_data(acc_url, engine='openpyxl') # accidentes
-data = load_data1(barrio_url, engine='openpyxl') # barrios
-coord = load_data2(coord_url, engine='openpyxl').dropna() # coordenadas
+vic = load_data(vic_url) # victimas
+com = load_data(com_url) # comparendos
+acc = load_data(acc_url) # accidentes
+data = load_data1(barrio_url) # barrios
+coord = load_data2(coord_url).dropna() # coordenadas
 coord['count'] = 1
 
 
