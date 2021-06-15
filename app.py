@@ -1,16 +1,12 @@
 # importa paquetes
-
 import streamlit as st
 import pandas as pd
 import numpy as np
 #! pip install plotly
 import plotly.express as px
-#import matplotlib.pyplot as plt
-#from pylab import rcParams
-#import json
 #! pip install geopandas
 import geopandas as gpd
-#import base64
+import base64
 import datetime as dt
 from shapely.geometry import shape, GeometryCollection, Point
 import folium
@@ -20,26 +16,22 @@ from folium.plugins import MeasureControl
 from folium.plugins import FloatImage
 from folium.plugins import MarkerCluster
 from folium.plugins import HeatMap
-#from folium.features import DivIcon
-#from collections import defaultdict
 from streamlit_folium import folium_static
-#from dateutil.relativedelta import relativedelta # to add days or years
 from statsmodels.tsa.seasonal import seasonal_decompose
 from statsmodels.tsa.arima.model import ARIMA
-import plotly.graph_objects
-
+import plotly.graph_objects as go
 
 # definir rutas bases de datos
-coord_url= 'coordenadas.csv'
-vic_url = 'VICTIMAS_ABR_2021.xlsx'
-com_url = 'COMPARENDOS_ABR_2021.xlsx'
-acc_url = 'ACCIDENTALIDAD_ABR_2021.xls'
-barrio_url = 'barrios.json'
+coord_url= 'Bases auxiliares/Coordenadas.csv'
+vic_url = 'Bases iniciales/VICTIMAS.xlsx'
+com_url = 'Bases iniciales/COMPARENDOS.xlsx'
+acc_url = 'Bases iniciales/ACCIDENTALIDAD.xlsx'
+barrio_url = 'Bases auxiliares/Barrios.json'
 
 # importar bases
 @st.cache(persist=True)
 def load_data(url):
-    df = pd.read_excel(url)
+    df = pd.read_excel(url,engine='openpyxl')
     return df
 
 # importar poligonos
@@ -54,39 +46,53 @@ def load_data2(url):
     df = pd.read_csv(url)
     return df
 
-
 # guardar los resultados de barrio
-@st.cache(suppress_st_warning=True)
+#@st.cache(suppress_st_warning=True)
 @st.cache(allow_output_mutation=True)
 @st.cache(persist=True)
-def aplicar_barrio(x):
-    
-    # encontrar barrio
-    def encuentra_barrio(row):
-        lat = row['Latitud']
-        long = row['Longitud']
-        point = Point(long, lat)                                                            
-        barrio = "No encontrado"
-        for feature in data.index:
-            try:
-                polygon = shape(data['geometry'][feature])
-                if polygon.contains(point):  
-                    barrio = data['NOM_BARRIO'][feature]
-            except:
-                barrio="No encontrado"
-        return barrio
-    
-    coord['Barrio'] = coord.apply(encuentra_barrio, axis = 1)
-    
-    return coord
+def load_coord():
 
-'''
+    # importar datos
+    coord=pd.read_csv('Bases auxiliares/Coordenadas.csv')
+    data=gpd.read_file('Bases auxiliares/Barrios.json')
+
+   # Función para encontrar el barrio
+    def encuentra_barrio(data, lat, long):
+     point = Point(lat, long)                                                            
+     barrio= "No encontrado"   
+     for feature in data.index:       
+         try:       
+             polygon = shape(data['geometry'][feature])
+             if polygon.contains(point):  
+                 barrio = data['NOM_BARRIO'][feature]
+         except:                
+             barrio= "No encontrado"           
+     return barrio
+
+   # agregar el barrio al dataframe
+    coord['Barrio']=''
+    for i in range(len(coord)):
+       long=coord['Longitud'][i]    
+       lat=coord['Latitud'][i]
+       coord['Barrio'][i]=encuentra_barrio(data,long,lat)
+
+   # group by del nro de barrios
+    porcentajes=coord.groupby(['Barrio'])[['Direcciones']].count().reset_index() # Groupby por barrio
+    porcentajes=porcentajes[['Barrio','Direcciones']]
+    porcentajes['%'] = round(porcentajes['Direcciones'] / porcentajes['Direcciones'].sum() * 100,2) # % de direcciones encontradas por barrio
+    porcentajes.rename(columns={"Barrio": "NOM_BARRIO"},inplace=True)
+
+    # generar base data
+    data=pd.merge(data,porcentajes,on='NOM_BARRIO',how='left')
+    
+    return data   
+
+# función para obtener link de descarga
 def get_table_download_link(df):
     csv = df.to_csv(index=False)
     b64 = base64.b64encode(csv.encode()).decode()  # some strings <-> bytes conversions necessary here
     href = f'<a href="data:file/csv;base64,{b64}" download="datos.csv">Descargar archivo csv</a>'
     return href
-'''
 
 # cargar datos 
 vic = load_data(vic_url) # victimas
@@ -94,12 +100,10 @@ com = load_data(com_url) # comparendos
 acc = load_data(acc_url) # accidentes
 data = load_data1(barrio_url) # barrios
 coord = load_data2(coord_url).dropna() # coordenadas
-coord['count'] = 1
 
 
-
-############## PEGAR PARTE 
-
+# definir base data
+data = load_coord()
 
 # poner titulo e imagen
 col1, col2 = st.beta_columns((1,7))
@@ -131,12 +135,10 @@ st.markdown(
 
 </style>
 """,
-    unsafe_allow_html=True,
-)
+    unsafe_allow_html=True,)
 
 col2.title(' Informe de Tránsito - La Estrella')
 st.sidebar.title('Menú Principal')
-
 
 ##### DESCRIPTIVO ----------------------------------------------------------
 
@@ -147,8 +149,10 @@ indicador = st.sidebar.selectbox('Indicador', ['','Accidentes por zona (Top 10)'
                                                'Accidentes por clase',
                                                'Evolución accidentes por año',
                                                'Evolución accidentes por mes',
+                                               'Evolución accidentes por hora',
                                                'Evolución comparendos por año',
-                                               'Evolución comparendos por mes'], key='1',
+                                               'Evolución comparendos por mes',
+                                               'Evolución comparendos por hora'], key='1',
                             format_func=lambda x: 'Seleccione una opción' if x == '' else x)
 
 
@@ -166,7 +170,6 @@ vic3 = vic2.groupby(['NRO_RADICADO'])[['h','m','F','M','0','ac','ci','co','mo','
 # hacer unión
 base = pd.merge(acc, vic3, how = 'left', on ='NRO_RADICADO')
 base.iloc[:,14:] = base.iloc[:,14:].fillna(0) # llenar nulos
-
 
 # diccionarios para columnas
 tipo_comparendo = {0:"Anulado", 1:"Infracción", 2:"Accidente", 3:"Decomiso", 4:"Moroso", 5:"Transporte", 6:"Stricker", 7:"Ambiental", 8:"Amonestación",
@@ -197,11 +200,9 @@ base['ZONA_DESC'] = base['ZONA']
 base['DISENO_DESC'] = base['DISENO']
 base['ESTADO_TIEMPO_DESC'] = base['ESTADO_TIEMPO']
 
-
 # remplazar nuevas columnas por diccionario
 base = base.replace({'ID_ZONA_DESC': desc_zona,'GRAVEDAD_DESC':desc_gravedad,'AREA_DESC':desc_area_acc,'SECTOR_DESC':desc_sector_acc,
             'ZONA_DESC':desc_zona,'DISENO_DESC':desc_diseno_acc, 'ESTADO_TIEMPO_DESC':desc_tiempo})
-
 
 # cambiar nombre de columnas de victimas
 base.rename(columns ={'h':'VIC_HERIDOS','m':'VIC_MUERTOS','F':'VIC_MUJERES','M':'VIC_HOMBRES','cant':'VIC_CANT'}, inplace = True)
@@ -209,16 +210,18 @@ base.rename(columns ={'h':'VIC_HERIDOS','m':'VIC_MUERTOS','F':'VIC_MUJERES','M':
 # organizar base accidentes
 df2 = base.copy(deep = True)
 df2["Año"] = df2["FECHA_ACCIDENTE"].dt.year
+df2["Hora"] = df2["FECHA_ACCIDENTE"].dt.hour
 df2["Mes"] = df2["FECHA_ACCIDENTE"].dt.strftime('%b')
 months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", 
           "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
 df2['Mes'] = pd.Categorical(df2['Mes'], categories=months, ordered=True)
-df2["año/mes"] =  df2["FECHA_ACCIDENTE"].dt.strftime('%Y-%m')
 df2['Accidentes'] = 1
 
 # organizar base comparendos
 com_2 = com.copy(deep = True)
-com_2["Año"] = com_2["FECHA"].dt.year
+com_2['Año'] = com_2['FECHA'].dt.year
+com_2['Hora'] = pd.to_datetime(com_2['HORA'])
+com_2['Hora'] = com_2['Hora'].dt.hour
 com_2["Accidentes"] = 1
 com_2["Zona"] = com_2["ID_ZONA"]
 com_2["Mes"] = com_2["FECHA"].dt.strftime('%b')
@@ -226,13 +229,16 @@ com_2['Mes'] = pd.Categorical(com_2['Mes'], categories=months, ordered=True)
 com_2.replace({"Zona" : desc_zona}, inplace=True) 
 
 ###----------------------------GRAFICAS ------------------------------------
+
+# definir opciones de filtro
 lista = sorted(list(acc['FECHA_ACCIDENTE'].dt.year.unique()), reverse = True)
 lista2 = months
+lista3 = sorted(list(acc['FECHA_ACCIDENTE'].dt.hour.unique()))
 
+# 1. condicional
 if indicador == 'Accidentes por zona (Top 10)': 
         
     # condicional para seleccionar todas las opciones
-
     Todos = st.checkbox("Seleccionar todos los años")
     if Todos:
         periodo2 = lista
@@ -253,7 +259,11 @@ if indicador == 'Accidentes por zona (Top 10)':
         df_barrios = df_barrios.sort_values(by=['VIC_CANT'],ascending=False)
         grafica = df_barrios[:10].sort_values(by=['VIC_CANT'],ascending=True)
         fig = px.bar(grafica, x="VIC_CANT", y="ID_ZONA_DESC", orientation='h')
-        fig.update_layout(title_text='<b>Top 10 zonas con mayor número de víctimas<b>',title_x=0.5, xaxis_title="Cantidad", yaxis_title="Zonas")
+        fig.update_layout(title_text='<b>Top 10 zonas con mayor número de víctimas<b>',
+                          title_x=0.5, xaxis_title="Cantidad",
+                          yaxis_title="Zonas", template = 'simple_white',
+                          paper_bgcolor='rgba(0,0,0,0)',
+                          plot_bgcolor='rgba(0,0,0,0)')
         gr1 = fig
 
 ## grafica 3
@@ -267,15 +277,19 @@ if indicador == 'Accidentes por zona (Top 10)':
         df_barrios = df_barrios.sort_values(by=['Accidentes'],ascending=False)
         grafica = df_barrios[:10].sort_values(by=['Accidentes'],ascending=True)
         fig = px.bar(grafica, x="Accidentes", y="ID_ZONA_DESC", orientation='h')
-        fig.update_layout(title_text='<b>Top 10 zonas con mayor número de accidentes<b>',title_x=0.5, xaxis_title="Cantidad", yaxis_title="Zonas")
+        fig.update_layout(title_text='<b>Top 10 zonas con mayor número de accidentes<b>',
+                          title_x=0.5, xaxis_title="Cantidad",
+                          yaxis_title="Zonas", template = 'simple_white',
+                          paper_bgcolor='rgba(0,0,0,0)',
+                          plot_bgcolor='rgba(0,0,0,0)')
         gr3 = fig
 
         st.plotly_chart(gr3)
         st.plotly_chart(gr1)
 
-
+# 2. Condicional
 if indicador == 'Evolución accidentes por año':
-    
+
     # condicional para seleccionar todas las opciones 
     Todos = st.checkbox("Seleccionar todos los meses")
     if Todos:
@@ -283,18 +297,20 @@ if indicador == 'Evolución accidentes por año':
     else:
         periodo3 = st.multiselect('Seleccione que meses quiere ver:',lista2, key='1')
 
-
 # grafica 5
     if periodo3 != []:
         df3 = df2[df2['Mes'].isin(periodo3)]
         df2_anos = pd.pivot_table(
             df3,index = ['ID_ZONA_DESC', "Año"], values = 'Accidentes', aggfunc = 'sum').reset_index()
         fig = px.line(df2_anos, x="Año", y="Accidentes", color='ID_ZONA_DESC',
-                      width=800, height=450)
+                      width=750, height=450)
         fig.update_traces(mode='markers+lines')
-        fig.update_layout(title_text='<b>Evolución de accidentes por año en cada Zona<b>', title_x=0.5,
+        fig.update_layout(title_text='<b>Evolución de accidentes por año en cada zona<b>', title_x=0.5,
                           xaxis_title="Años", yaxis_title='Cantidad',
-                          legend_title_text='<b>Nombre zona:<b>')
+                          legend_title_text='<b>Nombre zona:<b>',
+                          template = 'simple_white',
+                          paper_bgcolor='rgba(0,0,0,0)',
+                          plot_bgcolor='rgba(0,0,0,0)')
         gr5 = fig
 
 # grafica 6
@@ -305,16 +321,20 @@ if indicador == 'Evolución accidentes por año':
             aggfunc = 'sum'
             ).reset_index()
         fig = px.line(df2_anos2, x="Año", y="VIC_CANT", color='ID_ZONA_DESC',
-                      width=800, height=450)
+                      width=750, height=450)
         fig.update_traces(mode='markers+lines')
-        fig.update_layout(title_text='<b>Evolución de víctimas por año en cada Zona<b>',title_x=0.5,
+        fig.update_layout(title_text='<b>Evolución de víctimas por año en cada zona<b>',title_x=0.5,
                           xaxis_title='Años', yaxis_title='Cantidad',
-                          legend_title_text='<b>Nombre zona:<b>')
+                          legend_title_text='<b>Nombre zona:<b>',
+                          template = 'simple_white',
+                          paper_bgcolor='rgba(0,0,0,0)',
+                          plot_bgcolor='rgba(0,0,0,0)')
         gr6 = fig
         
         st.plotly_chart(gr5)
         st.plotly_chart(gr6)
 
+# 3. Condicional
 if indicador == 'Evolución accidentes por mes':
     
     # condicional para seleccionar todas las opciones 
@@ -334,11 +354,14 @@ if indicador == 'Evolución accidentes por mes':
                 aggfunc = 'sum'
                 ).reset_index()
         fig = px.line(df2_anos2, x="Mes", y="Accidentes", color='ID_ZONA_DESC',
-                      width=800, height=450)
+                      width=750, height=450)
         fig.update_traces(mode='markers+lines')
-        fig.update_layout(title_text='<b>Evolución de accidentes por mes en cada Zona<b>',title_x=0.5,
+        fig.update_layout(title_text='<b>Evolución de accidentes por mes en cada zona<b>',title_x=0.5,
                           xaxis_title='Meses', yaxis_title='Cantidad',
-                          legend_title_text='<b>Nombre zona:<b>')
+                          legend_title_text='<b>Nombre zona:<b>',
+                          template = 'simple_white',
+                          paper_bgcolor='rgba(0,0,0,0)',
+                          plot_bgcolor='rgba(0,0,0,0)')
         gr7 = fig
     
  # grafica 8
@@ -350,16 +373,21 @@ if indicador == 'Evolución accidentes por mes':
                 aggfunc = 'sum'
                 ).reset_index()
         fig = px.line(df2_anos2, x="Mes", y="VIC_CANT", color='ID_ZONA_DESC',
-                      width=800, height=450)
+                      width=750, height=450)
         fig.update_traces(mode='markers+lines')
-        fig.update_layout(title_text='<b>Evolución de víctimas por mes en cada Zona<b>',title_x=0.5,
+        fig.update_layout(title_text='<b>Evolución de víctimas por mes en cada zona<b>',title_x=0.5,
                           xaxis_title='Meses', yaxis_title='Cantidad',
-                          legend_title_text='<b>Nombre zona:<b>')
+                          legend_title_text='<b>Nombre zona:<b>',
+                          template = 'simple_white',
+                          paper_bgcolor='rgba(0,0,0,0)',
+                          plot_bgcolor='rgba(0,0,0,0)')
         gr8 = fig
 
         st.plotly_chart(gr7)
         st.plotly_chart(gr8)
 
+
+# 4. Condicional
 if indicador == 'Accidentes por gravedad':
     
     # condicional para seleccionar todas las opciones 
@@ -378,13 +406,19 @@ if indicador == 'Accidentes por gravedad':
             aggfunc = 'sum'
             ).reset_index()
         df2_gravedad_2.replace({'GRAVEDAD' : { 'd' : "Solo daños", 'h' : "Heridos", 'm' : "Muertos" }}, inplace=True)
-        fig = px.line(df2_gravedad_2, x="Año", y="Accidentes", color="GRAVEDAD")
+        fig = px.line(df2_gravedad_2, x="Año", y="Accidentes", color="GRAVEDAD",
+                      width=750, height=450)
         fig.update_traces(mode='markers+lines')
         fig.update_layout(title_text='<b>Accidentes según el tipo de gravedad<b>', title_x=0.5, xaxis_title="Años",
-                          yaxis_title="Cantidad", legend_title_text='<b>Gravedad:<b>')
+                          yaxis_title="Cantidad", legend_title_text='<b>Gravedad:<b>',
+                          template = 'simple_white',
+                          paper_bgcolor='rgba(0,0,0,0)',
+                          plot_bgcolor='rgba(0,0,0,0)')
 
         st.plotly_chart(fig)
 
+
+# 5. Condicional
 if indicador == 'Accidentes por clase': 
 
     # condicional para seleccionar todas las opciones 
@@ -404,13 +438,18 @@ if indicador == 'Accidentes por clase':
                 ).reset_index()
     
         fig = px.line(df_tacc2, x="Año", y="Accidentes", color='DESC_CLASE_ACCIDENTE',
-                      width=800, height=450)
+                      width=750, height=450)
         fig.update_traces(mode='markers+lines')
-        fig.update_layout(title_text='<b>Clase del accidente por año<b>', title_x=0.5, xaxis_title="Años", yaxis_title="Cantidad"
-                          , legend_title_text='<b>Clase:<b>')
+        fig.update_layout(title_text='<b>Accidentes según la clase<b>', title_x=0.5, xaxis_title="Años", yaxis_title="Cantidad"
+                          , legend_title_text='<b>Clase:<b>',
+                          template = 'simple_white',
+                          paper_bgcolor='rgba(0,0,0,0)',
+                          plot_bgcolor='rgba(0,0,0,0)')
 
         st.plotly_chart(fig)
 
+
+# 6. Condicional
 if indicador == 'Evolución comparendos por año': 
 
     # condicional para seleccionar todas las opciones 
@@ -428,11 +467,18 @@ if indicador == 'Evolución comparendos por año':
             values = ["Accidentes"],
             aggfunc = 'sum'
             ).reset_index()
-        fig = px.line(df_com, x="Año", y="Accidentes")
+        fig = px.line(df_com, x="Año", y="Accidentes",
+                      width=750, height=450)
         fig.update_traces(mode='markers+lines')
-        fig.update_layout(title_text='<b>Comparendos por año<b>', xaxis_title="Años",title_x=0.5, yaxis_title="Cantidad")
+        fig.update_layout(title_text='<b>Evolución de comparendos por año<b>', xaxis_title="Años",
+                          title_x=0.5, yaxis_title="Cantidad",
+                          template = 'simple_white',
+                          paper_bgcolor='rgba(0,0,0,0)',
+                          plot_bgcolor='rgba(0,0,0,0)')
         st.plotly_chart(fig)
+ 
         
+# 7. Condicional
 if indicador == 'Evolución comparendos por mes': 
 
     # condicional para seleccionar todas las opciones 
@@ -450,44 +496,120 @@ if indicador == 'Evolución comparendos por mes':
             values = ["Accidentes"],
             aggfunc = 'sum'
             ).reset_index()
-        fig = px.line(df_com, x="Mes", y="Accidentes")
+        fig = px.line(df_com, x="Mes", y="Accidentes",
+                      width=750, height=450)
         fig.update_traces(mode='markers+lines')
-        fig.update_layout(title_text='<b>Evolución de comparendos por mes<b>', xaxis_title="Meses", title_x=0.5, yaxis_title="Cantidad")
+        fig.update_layout(title_text='<b>Evolución de comparendos por mes<b>', 
+                          xaxis_title="Meses", title_x=0.5, yaxis_title="Cantidad",
+                          template = 'simple_white',
+                          paper_bgcolor='rgba(0,0,0,0)',
+                          plot_bgcolor='rgba(0,0,0,0)')
         st.plotly_chart(fig)
         
+
+# 8. Condicional
+if indicador == 'Evolución accidentes por hora':
+    
+    # condicional para seleccionar todas las opciones 
+    Todos = st.checkbox("Seleccionar todos los años")
+    if Todos:
+        periodo2 = lista
+    else:
+        periodo2 = st.multiselect('Seleccione que años quiere ver:',lista, key='1')
+
+# grafica 7
+    if periodo2 != []:
+        df3 = df2[df2['Año'].isin(periodo2)]
+        df2_anos2 = pd.pivot_table(
+            df3,
+                index = ['Hora', "Mes"],
+                values = 'Accidentes',
+                aggfunc = 'sum'
+                ).reset_index()
+        fig = px.line(df2_anos2, x="Hora", y="Accidentes", color='Mes',
+                      width=750, height=450)
+        fig.update_traces(mode='markers+lines')
+        fig.update_layout(title_text='<b>Evolución de accidentes por mes y hora<b>',title_x=0.5,
+                          xaxis_title='Meses', yaxis_title='Cantidad',
+                          legend_title_text='<b>Nombre mes:<b>',
+                          template = 'simple_white',
+                          paper_bgcolor='rgba(0,0,0,0)',
+                          plot_bgcolor='rgba(0,0,0,0)')
+        gr9 = fig
+    
+ # grafica 8
+        df3 = df2[df2['Año'].isin(periodo2)]
+        df2_anos2 = pd.pivot_table(
+            df3,
+                index = ['Hora', "Mes"],
+                values = 'VIC_CANT',
+                aggfunc = 'sum'
+                ).reset_index()
+        fig = px.line(df2_anos2, x="Hora", y="VIC_CANT", color='Mes',
+                      width=750, height=450)
+        fig.update_traces(mode='markers+lines')
+        fig.update_layout(title_text='<b>Evolución de víctimas por mes y hora<b>',title_x=0.5,
+                          xaxis_title='Horas', yaxis_title='Cantidad',
+                          legend_title_text='<b>Nombre mes:<b>',
+                          template = 'simple_white',
+                          paper_bgcolor='rgba(0,0,0,0)',
+                          plot_bgcolor='rgba(0,0,0,0)')
+        gr10 = fig
+
+        st.plotly_chart(gr9)
+        st.plotly_chart(gr10)
+        
+# 8. Condicional
+if indicador == 'Evolución comparendos por hora': 
+
+    # condicional para seleccionar todas las opciones 
+    Todos = st.checkbox("Seleccionar todos los años")
+    if Todos:
+        periodo2 = lista
+    else:
+        periodo2 = st.multiselect('Seleccione que años quiere ver:',lista, key='1')
+       
+    if periodo2 != []: 
+        df3 = com_2[com_2['Año'].isin(periodo2)]
+        df_com = pd.pivot_table(
+        df3,
+            index = ['Hora', "Mes"],
+            values = ["Accidentes"],
+            aggfunc = 'sum'
+            ).reset_index()
+        fig = px.line(df_com, x="Hora", y="Accidentes", color = 'Mes',
+                      width=750, height=450)
+        fig.update_traces(mode='markers+lines')
+        fig.update_layout(title_text='<b>Evolución de comparendos por mes y hora<b>', 
+                          xaxis_title="Horas", title_x=0.5,
+                          yaxis_title="Cantidad",
+                          template = 'simple_white',
+                          paper_bgcolor='rgba(0,0,0,0)',
+                          plot_bgcolor='rgba(0,0,0,0)',
+                          legend_title_text='<b>Nombre mes:<b>')
+        st.plotly_chart(fig)
+        
+
 ##### MAPAS ----------------------------------------------------------------
+
+# Filtros
 st.sidebar.markdown('### Mapas')
 
 # Seleccionar rango de fechas
 date = st.sidebar.date_input("Seleccione fechas", [])
 
-
-# aplicar función
-x = ''
-coord = aplicar_barrio(x)
+# Organizar base coordenadas
+coord['count'] = 1
 coord.rename(columns={"Nro Radicado": "NRO_RADICADO"},inplace=True) # renombrar columnas
 coord2=pd.merge(coord,acc,on='NRO_RADICADO',how='left')
 coord2['FECHA'] = coord2['FECHA_ACCIDENTE'].dt.date
 
 # Coordenadas por fecha
-
-
 try:
    if date[0] is not None and date[1] is not None:
       coord2=coord2[(coord2['FECHA']>=date[0]) & (coord2['FECHA']<=date[1])]
 except:
    st.write('')
-
-# agrupar por numero de barrios
-porcentajes = coord2.groupby(['Barrio'])[['Direcciones']].count().reset_index() # Groupby por barrio
-porcentajes = porcentajes[['Barrio','Direcciones']] # seleccionar barrio y direcciones
-porcentajes['%'] = round((porcentajes['Direcciones'] / porcentajes['Direcciones'].sum()*100),2) # % de direcciones encontradas por barrio
-porcentajes.rename(columns={"Barrio": "NOM_BARRIO"},inplace=True) # renombrar columnas
-
-# hacer merge entre porcentaje y datos originales
-data=pd.merge(data,porcentajes,on='NOM_BARRIO',how='left')
-
-
 
 # Seleccionar poligonos
 if st.sidebar.checkbox('Mapa de poligonos', False, key='1'):
@@ -679,7 +801,7 @@ acc_mes['fecha'] = acc_mes['fecha'].apply(lambda t: t.strftime("%Y-%m-%d"))
 ###---------------------PRONÓSTICO DÍA ACCIDENTES----------------------------
 @st.cache(allow_output_mutation=True)
 @st.cache(persist=True)
-def func_acc_dia(x):
+def func_acc_dia():
 # 1. definir base
     df_acc = acc_dia[acc_dia['año'].isin([2020,2021])].reset_index().drop('index', axis = 1) # seleccionar unicamente los años 2020 y 2021
     time= list(df_acc.index) # definir el numero de periodos
@@ -692,7 +814,6 @@ def func_acc_dia(x):
 
 
 ###--------------------------- GRAFICAS -------------------------------------
-
 
 # serie de datos
     df = df_acc[['fecha','acc_total']]
@@ -726,7 +847,6 @@ def func_acc_dia(x):
     b = fig
 ### --------------------------- MODELO --------------------------------------
 
-
 # ARMA
 # modelo
     p = 7
@@ -735,18 +855,15 @@ def func_acc_dia(x):
     model = ARIMA(x_train, order=(p,s,q), trend = 'c')
     model_fit = model.fit()
 
-
 # predecir
     dias = 30
     yhat = model_fit.predict(min(time), max(time)+dias)
-
 
 # crear tabla con resultados
     df_acc['fecha'] = pd.to_datetime(df_acc['fecha'])
     tb_dia = pd.DataFrame(pd.date_range(start=df_acc['fecha'].min(), end= df_acc['fecha'].max() + dt.timedelta(days=30))).rename(columns = {0:'fecha'})
     tb_dia['Real'] = series + [np.nan]*dias
     tb_dia['Pronóstico'] =  yhat
-
 
 # graficar
     fig = px.line(tb_dia, x='fecha', y=['Real','Pronóstico'], title='<b>Predicción de Accidentes por día (30 días)<b>',
@@ -763,7 +880,6 @@ def func_acc_dia(x):
         legend_title_text='')
     c = fig
 
-
 # redondear accidentes 
     tb_dia['Pronóstico'] = tb_dia['Pronóstico'].apply(lambda x: round(x,0))
     tb_dia['Real'] = tb_dia['Real'].fillna(0).astype('int')
@@ -773,15 +889,14 @@ def func_acc_dia(x):
 
     return a, b, c, d
 
-a, b, c, d = func_acc_dia(x)
+a, b, c, d = func_acc_dia()
 
 if tema == 'Accidentes' and periodo == 'Día' and datos == True :
     st.plotly_chart(a)
     st.plotly_chart(b)
     st.plotly_chart(c)
     
-    
-    fig = plotly.graph_objects.go.Figure(data=[plotly.graph_objects.go.Table(
+    fig = go.Figure(data=[go.Table(
     header=dict(values=list(d.columns),
                 fill_color='lightgrey',
                 align='center',
@@ -796,20 +911,17 @@ if tema == 'Accidentes' and periodo == 'Día' and datos == True :
     fig.update_layout(
     title_text="<b>Tabla con Predicciones <b>")
     st.write(fig)
-    
-    #st.markdown(get_table_download_link(d), unsafe_allow_html=True)
+    st.markdown(get_table_download_link(d), unsafe_allow_html=True)
 if tema == 'Accidentes' and periodo == 'Día' and datos == False :
     st.plotly_chart(a)
     st.plotly_chart(b)
     st.plotly_chart(c)
 
-
 ###---------------------PRONÓSTICO SEMANA ACCIDENTES-------------------------
-
 
 @st.cache(allow_output_mutation=True)
 @st.cache(persist=True)
-def func_acc_sem(x):
+def func_acc_sem():
 # 1. definir base
     time= list(acc_sem.index) # definir el numero de periodos
     series = list(acc_sem['acc_total']) # definir el número de accidentes
@@ -819,7 +931,6 @@ def func_acc_sem(x):
     x_train = series[:split_time] # dividir la serie
 
 ###--------------------------- GRAFICAS -------------------------------------
-
 
 # serie de datos
     df = acc_sem[['fecha','acc_total']]
@@ -856,8 +967,8 @@ def func_acc_sem(x):
 
 # ARMA
 # modelo
-    p = 24
-    q = 14
+    p = 2
+    q = 1
     s = 0
     model = ARIMA(x_train, order=(p,s,q), trend = 'ct')
     model_fit = model.fit()
@@ -896,15 +1007,14 @@ def func_acc_sem(x):
     
     return e, f, g, h
 
-e, f, g, h = func_acc_sem(x)
+e, f, g, h = func_acc_sem()
 
 if tema == 'Accidentes' and periodo == 'Semana' and datos == True :   
     st.plotly_chart(e)
     st.plotly_chart(f)
     st.plotly_chart(g)
     
-    
-    fig = plotly.graph_objects.go.Figure(data=[plotly.graph_objects.go.Table(
+    fig = go.Figure(data=[go.Table(
     header=dict(values=list(h.columns),
                 fill_color='lightgrey',
                 align='center',
@@ -919,19 +1029,17 @@ if tema == 'Accidentes' and periodo == 'Semana' and datos == True :
     fig.update_layout(
     title_text="<b>Tabla con Predicciones <b>")
     st.write(fig)
-    
-    #st.markdown(get_table_download_link(h), unsafe_allow_html=True)
+    st.markdown(get_table_download_link(h), unsafe_allow_html=True)
 if tema == 'Accidentes' and periodo == 'Semana' and datos == False :   
     st.plotly_chart(e)
     st.plotly_chart(f)
     st.plotly_chart(g)
 
-
 ###---------------------PRONÓSTICO MES ACCIDENTES----------------------------
 
 @st.cache(allow_output_mutation=True)
 @st.cache(persist=True)
-def func_acc_mes(x): 
+def func_acc_mes(): 
 # 1. definir base
     time= list(acc_mes.index) # definir el numero de periodos
     series = list(acc_mes['acc_total']) # definir el número de accidentes
@@ -1017,7 +1125,7 @@ def func_acc_mes(x):
     return i, j, k, l
 
 # aplicar función
-i, j, k, l = func_acc_mes(x)
+i, j, k, l = func_acc_mes()
 
 if tema == 'Accidentes' and periodo == 'Mes' and datos == True :   
     st.plotly_chart(i)
@@ -1025,7 +1133,7 @@ if tema == 'Accidentes' and periodo == 'Mes' and datos == True :
     st.plotly_chart(k)
     
     
-    fig = plotly.graph_objects.go.Figure(data=[plotly.graph_objects.go.Table(
+    fig = go.Figure(data=[go.Table(
     header=dict(values=list(l.columns),
                 fill_color='lightgrey',
                 align='center',
@@ -1041,12 +1149,11 @@ if tema == 'Accidentes' and periodo == 'Mes' and datos == True :
     title_text="<b>Tabla con Predicciones <b>")
     st.write(fig)
     
-    #st.markdown(get_table_download_link(l), unsafe_allow_html=True)
+    st.markdown(get_table_download_link(l), unsafe_allow_html=True)
 if tema == 'Accidentes' and periodo == 'Mes' and datos == False :   
     st.plotly_chart(i)
     st.plotly_chart(j)
     st.plotly_chart(k)
-
 
 #### COMPARENDOS -------------------------------------------------------------
 
@@ -1072,12 +1179,11 @@ com_dia['fecha'] = com_dia['fecha'].apply(lambda t: t.strftime("%Y-%m-%d"))
 com_sem['fecha'] = com_sem['fecha'].apply(lambda t: t.strftime("%Y-%m-%d"))
 com_mes['fecha'] = com_mes['fecha'].apply(lambda t: t.strftime("%Y-%m-%d"))
 
-
 ###---------------------PRONÓSTICO DÍA COMPARENDOS----------------------------
 
 @st.cache(allow_output_mutation=True)
 @st.cache(persist=True)
-def func_com_dia(x):
+def func_com_dia():
 # 1. definir base
     df_com = com_dia[com_dia['año'].isin([2020,2021])].reset_index().drop('index', axis = 1) # seleccionar unicamente los años 2020 y 2021
     time= list(df_com.index) # definir el numero de periodos
@@ -1129,7 +1235,6 @@ def func_com_dia(x):
     s = 0
     model = ARIMA(x_train, order=(p,s,q), trend = 'c')
     model_fit = model.fit()
-    
 
 # predecir
     dias = 30
@@ -1166,14 +1271,14 @@ def func_com_dia(x):
     return m, n, o, p
 
 # aplicar función
-m, n, o, p = func_com_dia(x)
+m, n, o, p = func_com_dia()
 
 if tema == 'Comparendos' and periodo == 'Día' and datos == True :   
     st.plotly_chart(m)
     st.plotly_chart(n)
     st.plotly_chart(o)
     
-    fig = plotly.graph_objects.go.Figure(data=[plotly.graph_objects.go.Table(
+    fig = go.Figure(data=[go.Table(
     header=dict(values=list(p.columns),
                 fill_color='lightgrey',
                 align='center',
@@ -1189,7 +1294,7 @@ if tema == 'Comparendos' and periodo == 'Día' and datos == True :
     title_text="<b>Tabla con Predicciones <b>")
     st.write(fig)
     
-    #st.markdown(get_table_download_link(p), unsafe_allow_html=True)
+    st.markdown(get_table_download_link(p), unsafe_allow_html=True)
 if tema == 'Comparendos' and periodo == 'Día' and datos == False :   
     st.plotly_chart(m)
     st.plotly_chart(n)
@@ -1199,7 +1304,7 @@ if tema == 'Comparendos' and periodo == 'Día' and datos == False :
 
 @st.cache(allow_output_mutation=True)
 @st.cache(persist=True)
-def func_com_sem(x):
+def func_com_sem():
 # 1. definir base
     time= list(com_sem.index) # definir el numero de periodos
     series = list(com_sem['com_total']) # definir el número de accidentes
@@ -1209,7 +1314,6 @@ def func_com_sem(x):
     x_train = series[:split_time] # dividir la serie
 
 ###--------------------------- GRAFICAS -------------------------------------
-
 
 # serie de datos
     df = com_sem[['fecha','com_total']]
@@ -1248,7 +1352,7 @@ def func_com_sem(x):
 
 # ARMA
 # modelo
-    p = 25
+    p = 2
     q = 2
     s = 0
     model = ARIMA(x_train, order=(p,s,q), trend = 'ct')
@@ -1289,14 +1393,14 @@ def func_com_sem(x):
     return u, r, s, t
 
 # aplicar función
-u, r, s, t = func_com_sem(x)
+u, r, s, t = func_com_sem()
 
 if tema == 'Comparendos' and periodo == 'Semana' and datos == True :   
     st.plotly_chart(u)
     st.plotly_chart(r)
     st.plotly_chart(s)
     
-    fig = plotly.graph_objects.go.Figure(data=[plotly.graph_objects.go.Table(
+    fig = go.Figure(data=[go.Table(
     header=dict(values=list(t.columns),
                 fill_color='lightgrey',
                 align='center',
@@ -1312,7 +1416,7 @@ if tema == 'Comparendos' and periodo == 'Semana' and datos == True :
     title_text="<b>Tabla con Predicciones <b>")
     st.write(fig)
     
-    #st.markdown(get_table_download_link(t), unsafe_allow_html=True)
+    st.markdown(get_table_download_link(t), unsafe_allow_html=True)
 if tema == 'Comparendos' and periodo == 'Semana' and datos == False :   
     st.plotly_chart(u)
     st.plotly_chart(r)
@@ -1322,7 +1426,7 @@ if tema == 'Comparendos' and periodo == 'Semana' and datos == False :
 
 @st.cache(allow_output_mutation=True)
 @st.cache(persist=True)
-def func_com_mes(x):
+def func_com_mes():
     
 # 1. definir base
     time= list(com_mes.index) # definir el numero de periodos
@@ -1413,14 +1517,14 @@ def func_com_mes(x):
     return v, w, y, z
 
 # aplicar función
-v, w, y, z = func_com_mes(x)
+v, w, y, z = func_com_mes()
     
 if tema == 'Comparendos' and periodo == 'Mes' and datos == True :   
     st.plotly_chart(v)
     st.plotly_chart(w)
     st.plotly_chart(y)
 
-    fig = plotly.graph_objects.go.Figure(data=[plotly.graph_objects.go.Table(
+    fig = go.Figure(data=[go.Table(
     header=dict(values=list(z.columns),
                 fill_color='lightgrey',
                 align='center',
@@ -1436,7 +1540,7 @@ if tema == 'Comparendos' and periodo == 'Mes' and datos == True :
     title_text="<b>Tabla con Predicciones <b>")
     st.write(fig)
     
-    #st.markdown(get_table_download_link(z), unsafe_allow_html=True)
+    st.markdown(get_table_download_link(z), unsafe_allow_html=True)
 if tema == 'Comparendos' and periodo == 'Mes' and datos == False :   
     st.plotly_chart(v)
     st.plotly_chart(w)
