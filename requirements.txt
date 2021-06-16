@@ -1,3 +1,13 @@
 pandas
 streamlit-folium
 streamlit
+xlrd<2.0
+folium
+geopandas
+numpy
+plotly
+Shapely
+statsmodels
+datetime
+openpyxl
+
